@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session History - RASD</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5.3 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        :root {
+            --rasd-dark-bg: #0f172a;
+            --rasd-card-bg: #1e293b;
+            --rasd-accent-green: #22c55e;
+            --rasd-accent-yellow: #eab308;
+            --rasd-accent-orange: #f97316;
+            --rasd-accent-red: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background-color: #0f172a !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .history-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+
+        .session-row {
+            cursor: pointer;
+            transition: background-color 0.15s ease-in-out;
+        }
+
+        .session-row:hover {
+            background-color: #f8fafc !important;
+        }
+
+        .event-detail-box {
+            background-color: #f8fafc;
+            border-top: 1px dashed #cbd5e1;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1.25rem;
+        }
+
+        .badge-orange {
+            background-color: #f97316;
+            color: #fff;
+        }
+
+        .font-monospace-custom {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        .chevron-icon {
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .session-row[aria-expanded="true"] .chevron-icon {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-shield-check text-primary fs-4"></i>
+                <span>RASD <span class="badge bg-primary text-white fw-normal fs-6">Fatigue Monitoring</span></span>
+            </a>
+            <div class="d-flex align-items-center gap-2">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light btn-sm px-3">
+                    <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                </a>
+                <a href="{{ url_for('detection') }}" class="btn btn-outline-light btn-sm px-3">
+                    <i class="bi bi-camera-video me-1"></i> Live Detection
+                </a>
+                <a href="{{ url_for('history') }}" class="btn btn-primary btn-sm px-3 active">
+                    <i class="bi bi-clock-history me-1"></i> History
+                </a>
+                <span class="navbar-text text-light ms-2 d-none d-md-inline">
+                    <i class="bi bi-person-circle me-1"></i> {{ name }}
+                </span>
+                <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm px-3 ms-2">
+                    <i class="bi bi-box-arrow-right me-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container-fluid px-4 py-4">
+        <!-- Page Header Banner -->
+        <div class="card border-0 shadow-sm mb-4 bg-white">
+            <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h2 class="fw-bold mb-1 text-dark">Work Session History</h2>
+                    <p class="text-muted mb-0">Detailed event logs, fatigue trigger breakdown, and duration analytics
+                        for all your sessions</p>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="badge bg-primary px-3 py-2 fs-6">
+                        <i class="bi bi-collection-fill me-1"></i> {{ sessions|length }} Total Sessions
+                    </span>
+                    <a href="{{ url_for('detection') }}"
+                        class="btn btn-success px-3 py-2 fw-semibold d-flex align-items-center gap-2 shadow-sm">
+                        <i class="bi bi-play-circle-fill fs-5"></i>
+                        <span>Start New Session</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sessions Table Card -->
+        <div class="history-card">
+            <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-list-ul text-primary me-2"></i>Monitored Sessions (Newest First)
+                </h5>
+                <small class="text-muted">Click any session row to expand detailed drowsiness events</small>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4" style="width: 40px;"></th>
+                            <th>Session</th>
+                            <th>Date & Time</th>
+                            <th>Duration</th>
+                            <th>Overall Status</th>
+                            <th>Avg Alertness</th>
+                            <th>Eye Closures</th>
+                            <th>Yawns</th>
+                            <th>Warnings</th>
+                            <th>Critical</th>
+                            <th class="text-end pe-4">Events</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if sessions and sessions|length > 0 %}
+                        {% for s in sessions %}
+                        {% set sess_events = events_by_session.get(s.id, []) %}
+                        <!-- Main Session Row -->
+                        <tr class="session-row" data-bs-toggle="collapse" data-bs-target="#events-collapse-{{ s.id }}"
+                            aria-expanded="false" id="session-{{ s.id }}">
+                            <td class="ps-4 text-muted">
+                                <i class="bi bi-chevron-down chevron-icon"></i>
+                            </td>
+                            <td class="fw-bold font-monospace-custom text-primary">#{{ s.id }}</td>
+                            <td>
+                                <div class="fw-semibold text-dark">
+                                    {{ s.start_time.strftime('%b %d, %Y') if s.start_time else '--' }}
+                                </div>
+                                <small class="text-muted">
+                                    {{ s.start_time.strftime('%I:%M:%S %p') if s.start_time else '--' }}
+                                </small>
+                            </td>
+                            <td class="font-monospace-custom fw-semibold">
+                                {% if s.duration < 60 %} {{ s.duration }}s {% else %} {{ s.duration // 60 }}m {{
+                                    s.duration % 60 }}s {% endif %} </td>
+                            <td>
+                                {% if s.overall_status == 'Good' %}
+                                <span class="badge bg-success px-2 py-1">Good</span>
+                                {% elif s.overall_status == 'Moderate' %}
+                                <span class="badge bg-warning text-dark px-2 py-1">Moderate</span>
+                                {% elif s.overall_status == 'Needs Attention' %}
+                                <span class="badge bg-danger px-2 py-1">Needs Attention</span>
+                                {% elif s.overall_status == 'Active' %}
+                                <span class="badge bg-info px-2 py-1">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary px-2 py-1">{{ s.overall_status or 'Completed' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-bold font-monospace-custom">{{ s.average_alertness }}%</span>
+                                    <div class="progress" style="width: 60px; height: 6px;">
+                                        <div class="progress-bar {% if s.average_alertness >= 75 %}bg-success{% elif s.average_alertness >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                                            style="width: {{ s.average_alertness }}%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span
+                                    class="fw-semibold {% if s.eye_closure_count > 0 %}text-danger{% else %}text-muted{% endif %}">
+                                    {{ s.eye_closure_count }}
+                                </span>
+                            </td>
+                            <td>
+                                <span
+                                    class="fw-semibold {% if s.yawn_count > 0 %}text-warning{% else %}text-muted{% endif %}">
+                                    {{ s.yawn_count }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if s.warning_count > 0 %}
+                                <span class="badge bg-warning text-dark">{{ s.warning_count }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if s.critical_count > 0 %}
+                                <span class="badge bg-danger">{{ s.critical_count }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4">
+                                <button
+                                    class="btn btn-sm {% if sess_events|length > 0 %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}">
+                                    <i class="bi bi-list-nested me-1"></i> {{ sess_events|length }} Events
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Collapsible Event Details Row -->
+                        <tr class="p-0 border-0">
+                            <td colspan="11" class="p-0 border-0">
+                                <div class="collapse" id="events-collapse-{{ s.id }}">
+                                    <div class="event-detail-box">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="fw-bold mb-0 text-dark">
+                                                <i class="bi bi-activity text-danger me-1"></i>
+                                                Detailed Drowsiness Events for Session #{{ s.id }}
+                                            </h6>
+                                            <span class="badge bg-light text-secondary border">
+                                                Start: {{ s.start_time.strftime('%I:%M:%S %p') if s.start_time else '--'
+                                                }} • End: {{ s.end_time.strftime('%I:%M:%S %p') if s.end_time else '--'
+                                                }}
+                                            </span>
+                                        </div>
+
+                                        {% if sess_events and sess_events|length > 0 %}
+                                        <div class="table-responsive bg-white rounded border shadow-sm">
+                                            <table class="table table-sm table-striped align-middle mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th class="ps-3">Event ID</th>
+                                                        <th>Time</th>
+                                                        <th>Trigger / Event Type</th>
+                                                        <th>Severity</th>
+                                                        <th>Duration</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for ev in sess_events %}
+                                                    <tr>
+                                                        <td class="ps-3 font-monospace-custom text-muted">#{{ ev.id }}
+                                                        </td>
+                                                        <td>
+                                                            <span class="font-monospace-custom">
+                                                                {{ ev.timestamp.strftime('%I:%M:%S %p') if ev.timestamp
+                                                                else '--' }}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            {% if ev.event_type == 'sustained_closure' %}
+                                                            <span
+                                                                class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                                                <i class="bi bi-eye-slash-fill me-1"></i> Sustained Eye
+                                                                Closure
+                                                            </span>
+                                                            {% elif ev.event_type == 'yawning' %}
+                                                            <span
+                                                                class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                                                <i class="bi bi-emoji-neutral-fill me-1"></i> Repeated
+                                                                Yawning
+                                                            </span>
+                                                            {% elif ev.event_type == 'combined' %}
+                                                            <span class="badge bg-danger text-white">
+                                                                <i class="bi bi-exclamation-octagon-fill me-1"></i>
+                                                                Combined (Closure + Yawn)
+                                                            </span>
+                                                            {% else %}
+                                                            <span class="badge bg-secondary">{{ ev.event_type }}</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>
+                                                            {% if ev.severity == 'CRITICAL' %}
+                                                            <span class="badge bg-danger px-2 py-1">CRITICAL</span>
+                                                            {% elif ev.severity == 'DROWSY' %}
+                                                            <span class="badge badge-orange px-2 py-1">DROWSY</span>
+                                                            {% else %}
+                                                            <span class="badge bg-secondary px-2 py-1">{{ ev.severity
+                                                                }}</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>
+                                                            <span class="font-monospace-custom fw-semibold text-dark">
+                                                                {{ ev.duration }}s
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {% else %}
+                                        <div class="alert alert-success d-flex align-items-center gap-2 mb-0">
+                                            <i class="bi bi-check-circle-fill fs-5"></i>
+                                            <span>No drowsiness triggers occurred during this session. Optimal alertness
+                                                maintained!</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="11" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                <h5>No Work Sessions Found</h5>
+                                <p class="mb-3">Start your first live detection session to begin recording drowsiness
+                                    and alertness logs.</p>
+                                <a href="{{ url_for('detection') }}" class="btn btn-primary btn-sm px-4">
+                                    <i class="bi bi-play-fill me-1"></i> Start Live Detection
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5.3 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Auto-expand if anchor in URL -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.location.hash) {
+                const targetRow = document.querySelector(window.location.hash);
+                if (targetRow) {
+                    const collapseTarget = targetRow.getAttribute('data-bs-target');
+                    if (collapseTarget) {
+                        const collapseEl = document.querySelector(collapseTarget);
+                        if (collapseEl) {
+                            const bsCollapse = new bootstrap.Collapse(collapseEl, { toggle: true });
+                            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

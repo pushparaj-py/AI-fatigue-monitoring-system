@@ -1,0 +1,21 @@
+# Python virtual environment
+venv/
+
+# Datasets (too large for GitHub, and not yours to redistribute)
+datasets/
+
+# Trained model files (large, and regenerable by re-running training scripts)
+models/*.keras
+models/*/checkpoint.keras
+models/face_landmarker.task
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment/config secrets (if you ever add a .env file with DB passwords)
+.env
+
+# OS-specific files
+.DS_Store
+Thumbs.db

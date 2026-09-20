@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Detection Feed - RASD</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5.3 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root {
+            --rasd-dark-bg: #0f172a;
+            --rasd-card-bg: #1e293b;
+            --rasd-border: #334155;
+            --rasd-accent-green: #22c55e;
+            --rasd-accent-yellow: #eab308;
+            --rasd-accent-orange: #f97316;
+            --rasd-accent-red: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background-color: #0f172a !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Top Warning Banner Styles */
+        .warning-banner-container {
+            transition: all 0.3s ease-in-out;
+        }
+
+        .drowsy-banner {
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            border: 2px solid #f97316;
+            color: #9a3412;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(249, 115, 22, 0.15);
+        }
+
+        .critical-banner {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border: 2px solid #ef4444;
+            color: #991b1b;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
+            animation: flash-critical-banner 1.2s infinite ease-in-out;
+        }
+
+        @keyframes flash-critical-banner {
+            0%, 100% {
+                border-color: #ef4444;
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+            }
+            50% {
+                border-color: #b91c1c;
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+        }
+
+        .video-card {
+            background-color: #0b0f19;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+            border: 1px solid #1e293b;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            background-color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-feed {
+            width: 100%;
+            height: auto;
+            max-height: 520px;
+            display: block;
+            aspect-ratio: 4/3;
+            object-fit: cover;
+        }
+
+        .live-tag {
+            background: rgba(34, 197, 94, 0.95);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            padding: 5px 12px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .standby-tag {
+            background: rgba(100, 116, 139, 0.85);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            padding: 5px 12px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #fff;
+            border-radius: 50%;
+            animation: pulse-live 1.2s infinite ease-in-out;
+        }
+
+        @keyframes pulse-live {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        .status-panel-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .metric-card {
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+            padding: 1rem;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .badge-orange {
+            background-color: #f97316;
+            color: #fff;
+        }
+
+        .status-alert-box {
+            border-radius: 10px;
+            padding: 1.25rem;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .status-alert-box.level-ALERT {
+            background-color: #f0fdf4;
+            border: 2px solid #86efac;
+            color: #166534;
+        }
+
+        .status-alert-box.level-EARLY_DROWSINESS {
+            background-color: #fefce8;
+            border: 2px solid #fde047;
+            color: #854d0e;
+        }
+
+        .status-alert-box.level-DROWSY {
+            background-color: #fff7ed;
+            border: 2px solid #fdba74;
+            color: #9a3412;
+        }
+
+        .status-alert-box.level-CRITICAL {
+            background-color: #fef2f2;
+            border: 2px solid #fca5a5;
+            color: #991b1b;
+            animation: pulse-critical 1.5s infinite;
+        }
+
+        .status-alert-box.level-NO_FACE {
+            background-color: #f1f5f9;
+            border: 2px solid #cbd5e1;
+            color: #475569;
+        }
+
+        .status-alert-box.level-STANDBY {
+            background-color: #f8fafc;
+            border: 2px dashed #94a3b8;
+            color: #64748b;
+        }
+
+        @keyframes pulse-critical {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+        }
+
+        .progress-rasd {
+            height: 14px;
+            border-radius: 8px;
+            background-color: #e2e8f0;
+            overflow: hidden;
+        }
+
+        .font-monospace-custom {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        .summary-stat-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hidden Audio Player for browser alert alarm -->
+    <audio id="alarmAudio" src="{{ url_for('static', filename='sounds/alarm.wav') }}" loop preload="auto"></audio>
+
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-shield-check text-primary fs-4"></i>
+                <span>RASD <span class="badge bg-primary text-white fw-normal fs-6">Workplace AI Monitor</span></span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <!-- Sound Alarm Toggle Button -->
+                <button id="audioToggleBtn" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 px-3">
+                    <i class="bi bi-volume-up-fill" id="audioToggleIcon"></i>
+                    <span id="audioToggleText">Audio Alert: ON</span>
+                </button>
+                <span class="navbar-text text-light d-none d-md-inline">
+                    <i class="bi bi-person-circle me-1"></i> {{ name }}
+                </span>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light btn-sm px-3">
+                    <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                </a>
+                <a href="{{ url_for('history') }}" class="btn btn-outline-light btn-sm px-3">
+                    <i class="bi bi-clock-history me-1"></i> History
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm px-3">
+                    <i class="bi bi-box-arrow-right me-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container-fluid px-4 py-4">
+        
+        <!-- PROMINENT VISUAL WARNING BANNER (Shows only during DROWSY / CRITICAL) -->
+        <div id="topWarningBannerContainer" class="warning-banner-container d-none mb-4">
+            <div id="topWarningBanner" class="p-3 d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                <div class="d-flex align-items-center gap-3">
+                    <span id="warningBannerIcon" class="fs-1"></span>
+                    <div>
+                        <h4 id="warningBannerTitle" class="fw-bold mb-1"></h4>
+                        <p id="warningBannerMessage" class="mb-0 fw-semibold"></p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span id="warningBannerBadge" class="badge fs-6 px-3 py-2"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Header & Start/Stop Controls -->
+        <div class="card border-0 shadow-sm mb-4 bg-white">
+            <div class="card-body p-3 p-md-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h3 class="fw-bold mb-1 text-dark">Real-Time Fatigue Monitoring</h3>
+                    <p class="text-muted mb-0">Facial landmark detection, sustained-closure LSTM inference & workstation wellbeing tracking</p>
+                </div>
+                
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <!-- Session Status Pill Badge -->
+                    <div id="sessionStatusPill" class="standby-tag">
+                        <i class="bi bi-pause-circle me-1"></i> SESSION STANDBY
+                    </div>
+
+                    <!-- Start Detection Button -->
+                    <button id="startDetectionBtn" class="btn btn-success px-4 py-2 fw-semibold d-flex align-items-center gap-2 shadow-sm">
+                        <i class="bi bi-play-fill fs-5"></i>
+                        <span>Start Detection</span>
+                    </button>
+
+                    <!-- Stop Detection Button -->
+                    <button id="stopDetectionBtn" class="btn btn-danger px-4 py-2 fw-semibold d-flex align-items-center gap-2 shadow-sm" disabled>
+                        <i class="bi bi-stop-fill fs-5"></i>
+                        <span>Stop Detection</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two Column Main Grid -->
+        <div class="row g-4">
+            <!-- Left Column: Video Feed Stream -->
+            <div class="col-xl-7 col-lg-7">
+                <div class="card video-card h-100">
+                    <div class="card-header bg-dark border-0 py-3 d-flex justify-content-between align-items-center px-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-camera-video-fill text-danger"></i>
+                            <span class="text-white fw-semibold">Webcam Video Stream</span>
+                        </div>
+                        <span class="badge bg-dark border border-secondary text-secondary font-monospace-custom">640x480 @ 30fps</span>
+                    </div>
+                    
+                    <div class="video-container p-2">
+                        <img src="{{ url_for('video_feed') }}" class="video-feed rounded" alt="Live Camera Video Stream" id="cameraFeed">
+                    </div>
+
+                    <div class="card-footer bg-dark border-0 py-3 px-4 d-flex justify-content-between align-items-center text-secondary small flex-wrap gap-2">
+                        <div>
+                            <i class="bi bi-cpu me-1 text-info"></i> Model: <strong>MediaPipe + CNN + LSTM v3</strong>
+                        </div>
+                        <div>
+                            <span id="streamStateBadge" class="badge bg-secondary-subtle text-secondary border border-secondary">
+                                <i class="bi bi-broadcast me-1 text-warning"></i> Inference Paused (Standby)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Live Status Panel (Phase 13 Screen Mockup Layout) -->
+            <div class="col-xl-5 col-lg-5">
+                <div class="card status-panel-card h-100">
+                    <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-activity text-primary me-2"></i>Live Status Panel
+                        </h5>
+                        <span id="pollerStatusBadge" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                            <i class="bi bi-arrow-repeat me-1 spin-sync"></i> Polling: 1s
+                        </span>
+                    </div>
+
+                    <div class="card-body p-4 d-flex flex-column gap-3">
+                        <!-- 1. Overall Drowsiness / Alertness Level Banner -->
+                        <div id="statusAlertBox" class="status-alert-box level-STANDBY">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <small class="text-uppercase fw-bold opacity-75 d-block mb-1">Drowsiness Level</small>
+                                    <h3 id="alertnessLevelText" class="fw-bold mb-1">STANDBY</h3>
+                                    <p id="alertnessLevelDesc" class="mb-0 small fw-medium">Click "Start Detection" to begin active AI monitoring.</p>
+                                </div>
+                                <div id="statusIconContainer" class="fs-1">
+                                    <i class="bi bi-pause-circle text-secondary" id="statusIcon"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Alertness Score % & Progress Bar -->
+                        <div class="metric-card">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-semibold text-secondary small text-uppercase">Alertness Score</span>
+                                <span class="fs-4 fw-bold text-dark font-monospace-custom">
+                                    <span id="alertnessPercent">100</span>%
+                                </span>
+                            </div>
+                            <div class="progress progress-rasd mb-1">
+                                <div id="alertnessProgressBar" class="progress-bar bg-success progress-bar-striped progress-bar-animated"
+                                     role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted small mt-1">
+                                <span>0% (Critical)</span>
+                                <span>50% (Drowsy)</span>
+                                <span>100% (Optimal)</span>
+                            </div>
+                        </div>
+
+                        <!-- 3. Two Mini Metric Cards: Eye Status & Yawning -->
+                        <div class="row g-3">
+                            <!-- Eye Status Card -->
+                            <div class="col-sm-6">
+                                <div class="metric-card h-100">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-eye-fill text-primary fs-5"></i>
+                                            <span class="fw-semibold text-secondary small text-uppercase">Eye Status</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <h4 id="eyeStatusText" class="fw-bold mb-0 text-secondary">--</h4>
+                                        <span id="eyeStatusBadge" class="badge bg-secondary px-2 py-1">Standby</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Yawning Detection Card -->
+                            <div class="col-sm-6">
+                                <div class="metric-card h-100">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-emoji-neutral text-warning fs-5"></i>
+                                            <span class="fw-semibold text-secondary small text-uppercase">Yawning</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <h4 id="yawnStatusText" class="fw-bold mb-0 text-secondary">--</h4>
+                                        <span id="yawnCountBadge" class="badge bg-light text-secondary border px-2 py-1">
+                                            <span id="yawnCount">0</span> in window
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Real-time Model Diagnostic Telemetry -->
+                        <div class="metric-card">
+                            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                                <i class="bi bi-graph-up-arrow text-primary"></i> Session & Diagnostics
+                            </h6>
+                            <div class="row g-2 small">
+                                <div class="col-6">
+                                    <div class="p-2 bg-white rounded border">
+                                        <span class="text-muted d-block">Active Session:</span>
+                                        <strong id="activeSessionText" class="text-dark">None (Inactive)</strong>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 bg-white rounded border">
+                                        <span class="text-muted d-block">Face Tracking:</span>
+                                        <strong id="faceTrackingText" class="text-muted">
+                                            <i class="bi bi-person-x-fill me-1"></i> Standby
+                                        </strong>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 bg-white rounded border">
+                                        <span class="text-muted d-block">LSTM Closure Score:</span>
+                                        <strong id="lstmScoreText" class="font-monospace-custom text-dark">0.0000</strong>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 bg-white rounded border">
+                                        <span class="text-muted d-block">Last Sync:</span>
+                                        <strong id="lastSyncText" class="text-secondary font-monospace-custom">--:--:--</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Summary Modal -->
+    <div class="modal fade" id="sessionSummaryModal" tabindex="-1" aria-labelledby="sessionSummaryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title fw-bold" id="sessionSummaryModalLabel">
+                        <i class="bi bi-clipboard-data-fill me-2"></i>Detection Session Summary
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="text-center mb-4">
+                        <span class="text-muted text-uppercase small fw-bold d-block mb-1">Overall Employee Assessment</span>
+                        <h2 id="modalOverallStatus" class="fw-bold mb-1 text-success">Good</h2>
+                        <span id="modalDurationText" class="badge bg-light text-dark border px-3 py-2 fs-6">Duration: 0s</span>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <div class="summary-stat-box">
+                                <span class="text-muted small d-block mb-1">Average Alertness</span>
+                                <h3 id="modalAvgAlertness" class="fw-bold mb-0 text-primary">100%</h3>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="summary-stat-box">
+                                <span class="text-muted small d-block mb-1">Sustained Closures</span>
+                                <h3 id="modalEyeClosures" class="fw-bold mb-0 text-dark">0</h3>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="summary-stat-box">
+                                <span class="text-muted small d-block mb-1">Yawn Detections</span>
+                                <h3 id="modalYawns" class="fw-bold mb-0 text-warning">0</h3>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="summary-stat-box">
+                                <span class="text-muted small d-block mb-1">Drowsy / Critical Alerts</span>
+                                <h3 id="modalAlertsCount" class="fw-bold mb-0 text-danger">0</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info small mb-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-info-circle-fill fs-5"></i>
+                        <span>Session statistics have been saved to your database history record.</span>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-3">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Close</button>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary px-3">Go to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5.3 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Real-Time Status & Audio Alert Controller Script -->
+    <script>
+        // DOM Element references
+        const alarmAudio = document.getElementById('alarmAudio');
+        const audioToggleBtn = document.getElementById('audioToggleBtn');
+        const audioToggleIcon = document.getElementById('audioToggleIcon');
+        const audioToggleText = document.getElementById('audioToggleText');
+
+        const startDetectionBtn = document.getElementById('startDetectionBtn');
+        const stopDetectionBtn = document.getElementById('stopDetectionBtn');
+        const sessionStatusPill = document.getElementById('sessionStatusPill');
+        const streamStateBadge = document.getElementById('streamStateBadge');
+
+        const topWarningBannerContainer = document.getElementById('topWarningBannerContainer');
+        const topWarningBanner = document.getElementById('topWarningBanner');
+        const warningBannerIcon = document.getElementById('warningBannerIcon');
+        const warningBannerTitle = document.getElementById('warningBannerTitle');
+        const warningBannerMessage = document.getElementById('warningBannerMessage');
+        const warningBannerBadge = document.getElementById('warningBannerBadge');
+
+        const statusAlertBox = document.getElementById('statusAlertBox');
+        const alertnessLevelText = document.getElementById('alertnessLevelText');
+        const alertnessLevelDesc = document.getElementById('alertnessLevelDesc');
+        const statusIcon = document.getElementById('statusIcon');
+        const alertnessPercent = document.getElementById('alertnessPercent');
+        const alertnessProgressBar = document.getElementById('alertnessProgressBar');
+        const eyeStatusText = document.getElementById('eyeStatusText');
+        const eyeStatusBadge = document.getElementById('eyeStatusBadge');
+        const yawnStatusText = document.getElementById('yawnStatusText');
+        const yawnCount = document.getElementById('yawnCount');
+        const activeSessionText = document.getElementById('activeSessionText');
+        const faceTrackingText = document.getElementById('faceTrackingText');
+        const lstmScoreText = document.getElementById('lstmScoreText');
+        const lastSyncText = document.getElementById('lastSyncText');
+        const pollerStatusBadge = document.getElementById('pollerStatusBadge');
+
+        // Modal Elements
+        const sessionSummaryModal = new bootstrap.Modal(document.getElementById('sessionSummaryModal'));
+        const modalOverallStatus = document.getElementById('modalOverallStatus');
+        const modalDurationText = document.getElementById('modalDurationText');
+        const modalAvgAlertness = document.getElementById('modalAvgAlertness');
+        const modalEyeClosures = document.getElementById('modalEyeClosures');
+        const modalYawns = document.getElementById('modalYawns');
+        const modalAlertsCount = document.getElementById('modalAlertsCount');
+
+        // Audio state
+        let isAudioMuted = false;
+        let isAudioUnlocked = false;
+
+        // Unlock audio on first user click anywhere on page
+        function unlockAudio() {
+            if (!isAudioUnlocked && alarmAudio) {
+                alarmAudio.play().then(() => {
+                    alarmAudio.pause();
+                    alarmAudio.currentTime = 0;
+                    isAudioUnlocked = true;
+                }).catch(() => {});
+            }
+        }
+        document.addEventListener('click', unlockAudio, { once: true });
+
+        // Audio toggle button handler
+        audioToggleBtn.addEventListener('click', () => {
+            isAudioMuted = !isAudioMuted;
+            if (isAudioMuted) {
+                stopAlarm();
+                audioToggleBtn.className = "btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 px-3";
+                audioToggleIcon.className = "bi bi-volume-mute-fill";
+                audioToggleText.textContent = "Audio Alert: MUTED";
+            } else {
+                unlockAudio();
+                audioToggleBtn.className = "btn btn-sm btn-outline-success d-flex align-items-center gap-1 px-3";
+                audioToggleIcon.className = "bi bi-volume-up-fill";
+                audioToggleText.textContent = "Audio Alert: ON";
+            }
+        });
+
+        // Alarm sound playback controller
+        function startAlarm() {
+            if (isAudioMuted || !alarmAudio) return;
+            if (alarmAudio.paused) {
+                alarmAudio.currentTime = 0;
+                alarmAudio.play().catch(e => {
+                    console.log("Audio play awaiting user interaction:", e);
+                });
+            }
+        }
+
+        function stopAlarm() {
+            if (alarmAudio && !alarmAudio.paused) {
+                alarmAudio.pause();
+                alarmAudio.currentTime = 0;
+            }
+        }
+
+        // Level Configurations for UI presentation
+        const LEVEL_CONFIGS = {
+            'ALERT': {
+                cssClass: 'level-ALERT',
+                title: 'ALERT',
+                desc: 'Employee is attentive, eyes open, and fully alert.',
+                iconClass: 'bi bi-check-circle-fill text-success',
+                progressClass: 'bg-success'
+            },
+            'EARLY_DROWSINESS': {
+                cssClass: 'level-EARLY_DROWSINESS',
+                title: 'EARLY DROWSINESS',
+                desc: 'Mild fatigue detected or repeated yawning observed.',
+                iconClass: 'bi bi-exclamation-triangle-fill text-warning',
+                progressClass: 'bg-warning'
+            },
+            'DROWSY': {
+                cssClass: 'level-DROWSY',
+                title: 'DROWSY',
+                desc: 'Sustained eye closure or fatigue detected — take a break!',
+                iconClass: 'bi bi-exclamation-circle-fill text-danger',
+                progressClass: 'bg-orange badge-orange'
+            },
+            'CRITICAL': {
+                cssClass: 'level-CRITICAL',
+                title: 'CRITICAL DROWSINESS',
+                desc: 'Severe prolonged eye closure detected! Urgent hazard!',
+                iconClass: 'bi bi-slash-circle-fill text-danger',
+                progressClass: 'bg-danger'
+            },
+            'NO_FACE': {
+                cssClass: 'level-NO_FACE',
+                title: 'NO FACE DETECTED',
+                desc: 'Position your face clearly in front of the camera.',
+                iconClass: 'bi bi-person-x-fill text-secondary',
+                progressClass: 'bg-secondary'
+            },
+            'STANDBY': {
+                cssClass: 'level-STANDBY',
+                title: 'STANDBY',
+                desc: 'Click "Start Detection" to begin active AI monitoring.',
+                iconClass: 'bi bi-pause-circle text-secondary',
+                progressClass: 'bg-secondary'
+            }
+        };
+
+        // Start Detection Button Handler
+        startDetectionBtn.addEventListener('click', async () => {
+            unlockAudio();
+            startDetectionBtn.disabled = true;
+            try {
+                const response = await fetch("{{ url_for('start_session') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const res = await response.json();
+                if (res.success) {
+                    console.log("Started session ID:", res.session_id);
+                    setSessionUIActive(res.session_id);
+                    fetchDetectionStatus();
+                } else {
+                    alert("Failed to start session: " + (res.error || "Unknown error"));
+                    startDetectionBtn.disabled = false;
+                }
+            } catch (err) {
+                console.error("Error starting session:", err);
+                alert("Network error starting session");
+                startDetectionBtn.disabled = false;
+            }
+        });
+
+        // Stop Detection Button Handler
+        stopDetectionBtn.addEventListener('click', async () => {
+            stopDetectionBtn.disabled = true;
+            try {
+                const response = await fetch("{{ url_for('stop_session') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const res = await response.json();
+                if (res.success && res.summary) {
+                    console.log("Stopped session summary:", res.summary);
+                    stopAlarm();
+                    setSessionUIInactive();
+                    showSessionSummaryModal(res.summary);
+                    fetchDetectionStatus();
+                } else {
+                    alert("Failed to stop session: " + (res.error || "Unknown error"));
+                    stopDetectionBtn.disabled = false;
+                }
+            } catch (err) {
+                console.error("Error stopping session:", err);
+                alert("Network error stopping session");
+                stopDetectionBtn.disabled = false;
+            }
+        });
+
+        function setSessionUIActive(sessionId) {
+            startDetectionBtn.disabled = true;
+            startDetectionBtn.classList.add('d-none');
+            stopDetectionBtn.disabled = false;
+            stopDetectionBtn.classList.remove('d-none');
+
+            sessionStatusPill.className = "live-tag";
+            sessionStatusPill.innerHTML = `<span class="live-dot"></span> LIVE SESSION #${sessionId || ''} ACTIVE`;
+
+            streamStateBadge.className = "badge bg-success-subtle text-success border border-success-subtle";
+            streamStateBadge.innerHTML = '<i class="bi bi-broadcast me-1"></i> Inference Running (30 FPS)';
+
+            activeSessionText.className = "text-success fw-bold";
+            activeSessionText.textContent = `Session #${sessionId || 'Active'}`;
+        }
+
+        function setSessionUIInactive() {
+            startDetectionBtn.disabled = false;
+            startDetectionBtn.classList.remove('d-none');
+            stopDetectionBtn.disabled = true;
+            stopDetectionBtn.classList.add('d-none');
+
+            sessionStatusPill.className = "standby-tag";
+            sessionStatusPill.innerHTML = '<i class="bi bi-pause-circle me-1"></i> SESSION STANDBY';
+
+            streamStateBadge.className = "badge bg-secondary-subtle text-secondary border border-secondary";
+            streamStateBadge.innerHTML = '<i class="bi bi-broadcast me-1 text-warning"></i> Inference Paused (Standby)';
+
+            activeSessionText.className = "text-muted";
+            activeSessionText.textContent = "None (Inactive)";
+
+            topWarningBannerContainer.classList.add('d-none');
+        }
+
+        function showSessionSummaryModal(summary) {
+            modalOverallStatus.textContent = summary.overall_status;
+            if (summary.overall_status === 'Good') {
+                modalOverallStatus.className = 'fw-bold mb-1 text-success';
+            } else if (summary.overall_status === 'Moderate') {
+                modalOverallStatus.className = 'fw-bold mb-1 text-warning';
+            } else {
+                modalOverallStatus.className = 'fw-bold mb-1 text-danger';
+            }
+
+            modalDurationText.textContent = `Duration: ${summary.duration} seconds`;
+            modalAvgAlertness.textContent = `${summary.average_alertness}%`;
+            modalEyeClosures.textContent = summary.eye_closure_count;
+            modalYawns.textContent = summary.yawn_count;
+            modalAlertsCount.textContent = (summary.warning_count || 0) + (summary.critical_count || 0);
+
+            sessionSummaryModal.show();
+        }
+
+        // Update Top Warning Banner and Audible Alarm based on level
+        function updateAlertAndBanners(level, isSessionActive) {
+            if (!isSessionActive) {
+                stopAlarm();
+                topWarningBannerContainer.classList.add('d-none');
+                return;
+            }
+
+            if (level === 'CRITICAL') {
+                startAlarm();
+                topWarningBannerContainer.classList.remove('d-none');
+                topWarningBanner.className = 'critical-banner p-3 d-flex align-items-center justify-content-between gap-3 flex-wrap';
+                warningBannerIcon.innerHTML = '<i class="bi bi-slash-circle-fill text-danger"></i>';
+                warningBannerTitle.textContent = 'EMERGENCY: CRITICAL DROWSINESS DETECTED';
+                warningBannerMessage.textContent = 'Severe sustained eye closure detected! High risk of microsleep at the workstation. Please step away and rest immediately!';
+                warningBannerBadge.className = 'badge bg-danger px-3 py-2 text-white';
+                warningBannerBadge.innerHTML = '<i class="bi bi-bell-fill me-1"></i> CRITICAL HAZARD';
+
+            } else if (level === 'DROWSY') {
+                startAlarm();
+                topWarningBannerContainer.classList.remove('d-none');
+                topWarningBanner.className = 'drowsy-banner p-3 d-flex align-items-center justify-content-between gap-3 flex-wrap';
+                warningBannerIcon.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning"></i>';
+                warningBannerTitle.textContent = 'WARNING: DROWSINESS DETECTED';
+                warningBannerMessage.textContent = 'Sustained eye closure or fatigue patterns observed. Please remain alert and consider taking a short break from the screen.';
+                warningBannerBadge.className = 'badge bg-warning text-dark px-3 py-2';
+                warningBannerBadge.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i> DROWSY WARNING';
+
+            } else {
+                stopAlarm();
+                topWarningBannerContainer.classList.add('d-none');
+            }
+        }
+
+        // Poll /detection_status endpoint
+        async function fetchDetectionStatus() {
+            try {
+                const response = await fetch("{{ url_for('detection_status') }}", {
+                    cache: 'no-store'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+
+                const data = await response.json();
+                updateStatusPanel(data);
+
+                pollerStatusBadge.className = "badge bg-success-subtle text-success border border-success-subtle px-2 py-1";
+                pollerStatusBadge.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Polling: 1s';
+            } catch (err) {
+                console.warn("Detection status poll error:", err);
+                pollerStatusBadge.className = "badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1";
+                pollerStatusBadge.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i> Sync Error';
+            }
+        }
+
+        // Update UI with fresh telemetry
+        function updateStatusPanel(data) {
+            const isSessionActive = Boolean(data.session_active);
+            const sessionId = data.session_id;
+
+            // Sync button & pill states if server state changed
+            if (isSessionActive) {
+                setSessionUIActive(sessionId);
+            } else {
+                setSessionUIInactive();
+            }
+
+            const rawLevel = data.alertness_level || 'STANDBY';
+            const level = isSessionActive ? (rawLevel === 'STANDBY' ? (data.face_detected ? 'ALERT' : 'NO_FACE') : rawLevel) : 'STANDBY';
+            const percent = typeof data.alertness_percent === 'number' ? data.alertness_percent : (isSessionActive ? 0 : 100);
+            const eye = data.eye_status || 'N/A';
+            const yawn = data.yawn_status || 'No';
+            const faceDetected = Boolean(data.face_detected);
+            const lstmScore = data.lstm_drowsy_score !== undefined ? data.lstm_drowsy_score : 0.0;
+            const yawnRecentCount = data.recent_yawn_count !== undefined ? data.recent_yawn_count : 0;
+
+            // Trigger Visual Warning Banner & Audible Alarm
+            updateAlertAndBanners(level, isSessionActive);
+
+            // 1. Overall Level Banner
+            const config = LEVEL_CONFIGS[level] || LEVEL_CONFIGS['ALERT'];
+            statusAlertBox.className = `status-alert-box ${config.cssClass}`;
+            alertnessLevelText.textContent = config.title;
+            alertnessLevelDesc.textContent = config.desc;
+            statusIcon.className = config.iconClass;
+
+            // 2. Alertness Score & Progress Bar
+            alertnessPercent.textContent = percent;
+            alertnessProgressBar.style.width = `${percent}%`;
+            alertnessProgressBar.setAttribute('aria-valuenow', percent);
+            
+            // Dynamic bar color based on percentage
+            alertnessProgressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+            if (!isSessionActive) {
+                alertnessProgressBar.classList.add('bg-secondary');
+            } else if (percent >= 70) {
+                alertnessProgressBar.classList.add('bg-success');
+            } else if (percent >= 45) {
+                alertnessProgressBar.classList.add('bg-warning');
+            } else if (percent >= 25) {
+                alertnessProgressBar.classList.add('badge-orange');
+            } else {
+                alertnessProgressBar.classList.add('bg-danger');
+            }
+
+            // 3. Eye Status
+            if (!isSessionActive) {
+                eyeStatusText.textContent = '--';
+                eyeStatusText.className = 'fw-bold mb-0 text-secondary';
+                eyeStatusBadge.className = 'badge bg-secondary px-2 py-1';
+                eyeStatusBadge.textContent = 'Standby';
+            } else {
+                eyeStatusText.textContent = eye;
+                if (eye === 'Open') {
+                    eyeStatusText.className = 'fw-bold mb-0 text-success';
+                    eyeStatusBadge.className = 'badge bg-success px-2 py-1';
+                    eyeStatusBadge.textContent = 'Normal';
+                } else if (eye === 'Closed') {
+                    eyeStatusText.className = 'fw-bold mb-0 text-danger';
+                    eyeStatusBadge.className = 'badge bg-danger px-2 py-1';
+                    eyeStatusBadge.textContent = 'Closed';
+                } else {
+                    eyeStatusText.className = 'fw-bold mb-0 text-secondary';
+                    eyeStatusBadge.className = 'badge bg-secondary px-2 py-1';
+                    eyeStatusBadge.textContent = 'N/A';
+                }
+            }
+
+            // 4. Yawning Status
+            if (!isSessionActive) {
+                yawnStatusText.textContent = '--';
+                yawnStatusText.className = 'fw-bold mb-0 text-secondary';
+                yawnCount.textContent = '0';
+                yawnCount.parentElement.className = 'badge bg-light text-secondary border px-2 py-1';
+            } else {
+                yawnStatusText.textContent = yawn;
+                yawnCount.textContent = yawnRecentCount;
+                if (yawn === 'Yes') {
+                    yawnStatusText.className = 'fw-bold mb-0 text-warning';
+                    yawnCount.parentElement.className = 'badge bg-warning text-dark border px-2 py-1';
+                } else if (yawn === 'No') {
+                    yawnStatusText.className = 'fw-bold mb-0 text-success';
+                    yawnCount.parentElement.className = 'badge bg-light text-secondary border px-2 py-1';
+                } else {
+                    yawnStatusText.className = 'fw-bold mb-0 text-secondary';
+                    yawnCount.parentElement.className = 'badge bg-light text-secondary border px-2 py-1';
+                }
+            }
+
+            // 5. Diagnostics
+            if (!isSessionActive) {
+                faceTrackingText.className = 'text-muted';
+                faceTrackingText.innerHTML = '<i class="bi bi-person-x-fill me-1"></i> Standby';
+            } else if (faceDetected) {
+                faceTrackingText.className = 'text-success';
+                faceTrackingText.innerHTML = '<i class="bi bi-person-check-fill me-1"></i> Detected';
+            } else {
+                faceTrackingText.className = 'text-muted';
+                faceTrackingText.innerHTML = '<i class="bi bi-person-x-fill me-1"></i> Searching...';
+            }
+
+            lstmScoreText.textContent = isSessionActive ? Number(lstmScore).toFixed(4) : '0.0000';
+
+            const now = new Date();
+            lastSyncText.textContent = now.toTimeString().split(' ')[0];
+        }
+
+        // Initial poll and recurring 1-second interval
+        fetchDetectionStatus();
+        setInterval(fetchDetectionStatus, 1000);
+    </script>
+</body>
+</html>

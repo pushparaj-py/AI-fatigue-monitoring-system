@@ -1,0 +1,18 @@
+# Core Web & Database
+Flask==3.1.3
+mysql-connector-python==26.7.0
+
+# Computer Vision & Media Processing
+opencv-python==5.0.0.93
+mediapipe==1.0.1
+
+# Data Science & Machine Learning
+numpy==2.5.3
+pandas==3.0.5
+scikit-learn==1.9.1
+matplotlib==3.11.2
+
+# Note on TensorFlow:
+# Official stable releases of 'tensorflow' do not yet publish pre-built wheels for Python 3.14 on Windows.
+# For Python 3.14, 'tf-nightly' can be installed, or Python 3.11/3.12 should be used for official stable 'tensorflow'.
+# tensorflow

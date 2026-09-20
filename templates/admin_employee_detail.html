@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{{ employee.name }} — Session History — RASD Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f7fa;
+        }
+
+        .navbar-dark-custom {
+            background-color: #0f172a;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand navbar-dark navbar-dark-custom px-3">
+        <span class="navbar-brand fw-bold">RASD <span class="badge bg-primary ms-1">Management Console</span></span>
+        <div class="ms-auto d-flex align-items-center gap-3">
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm">Back to Dashboard</a>
+            <a href="{{ url_for('admin_logout') }}" class="btn btn-outline-light btn-sm">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4 px-4">
+
+        <div class="mb-4">
+            <h2 class="fw-bold mb-1">{{ employee.name }}</h2>
+            <p class="text-muted mb-0">{{ employee.department }} · {{ employee.email }}</p>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Session History</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-uppercase small text-muted">
+                                <th>Date & Time</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th class="text-center">Avg Alertness</th>
+                                <th class="text-center">Closures</th>
+                                <th class="text-center">Yawns</th>
+                                <th class="text-center">Warnings</th>
+                                <th class="text-center">Critical</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in sessions %}
+                            <tr>
+                                <td>{{ s.start_time.strftime('%b %d, %Y %I:%M %p') if s.start_time else '—' }}</td>
+                                <td>{{ s.duration }}s</td>
+                                <td>
+                                    {% if s.overall_status == 'Needs Attention' %}
+                                    <span class="badge bg-danger">{{ s.overall_status }}</span>
+                                    {% elif s.overall_status == 'Moderate' %}
+                                    <span class="badge bg-warning text-dark">{{ s.overall_status }}</span>
+                                    {% else %}
+                                    <span class="badge bg-success">{{ s.overall_status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ s.average_alertness }}%</td>
+                                <td class="text-center">{{ s.eye_closure_count }}</td>
+                                <td class="text-center">{{ s.yawn_count }}</td>
+                                <td class="text-center">{{ s.warning_count }}</td>
+                                <td class="text-center">{{ s.critical_count }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">No sessions recorded for this
+                                    employee yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+
+</html>
